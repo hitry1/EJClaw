@@ -632,7 +632,14 @@ export function prepareGroupEnvironment(
   }
 
   const agentType = group.agentType || 'claude-code';
-  const runnerDirName = agentType === 'codex' ? 'codex-runner' : 'agent-runner';
+  const runnerDirName =
+    agentType === 'codex'
+      ? 'codex-runner'
+      : agentType === 'ollama'
+        ? 'ollama-runner'
+        : agentType === 'opencode'
+          ? 'opencode-runner'
+          : 'agent-runner';
   const runnerDir = path.join(projectRoot, 'runners', runnerDirName);
 
   const envVars = readEnvFile([
@@ -648,6 +655,9 @@ export function prepareGroupEnvironment(
     'CODEX_MODEL',
     'CODEX_EFFORT',
     'CODEX_GOALS',
+    'OLLAMA_BASE_URL',
+    'OLLAMA_MODEL',
+    'OPENCODE_MODEL',
   ]);
 
   const env = buildBaseRunnerEnv({
@@ -679,6 +689,9 @@ export function prepareGroupEnvironment(
       memoryBriefing: options?.memoryBriefing,
       skillOverrides: options?.skillOverrides,
     });
+  } else if (agentType === 'ollama') {
+    if (envVars.OLLAMA_BASE_URL) env.OLLAMA_BASE_URL = envVars.OLLAMA_BASE_URL;
+    if (envVars.OLLAMA_MODEL) env.OLLAMA_MODEL = envVars.OLLAMA_MODEL;
   } else {
     prepareClaudeEnvironment({ env, envVars, group });
   }

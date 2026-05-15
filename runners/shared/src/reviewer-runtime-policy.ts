@@ -4,7 +4,7 @@ import path from 'path';
 
 import type { RoomRoleContext } from './room-role-context.js';
 
-export type RunnerAgentType = 'claude-code' | 'codex';
+export type RunnerAgentType = 'claude-code' | 'codex' | 'ollama';
 export type ClaudeReadonlySandboxMode = 'strict' | 'best-effort';
 
 export const REVIEWER_RUNTIME_ENV = 'EJCLAW_REVIEWER_RUNTIME';
@@ -33,6 +33,13 @@ const REVIEWER_RUNTIME_CAPABILITIES = {
     supportsShellPreflightHook: false,
     supportsReadonlySandboxing: false,
     supportsGitWriteGuard: true,
+    supportsHardMutationBlocking: false,
+  },
+  ollama: {
+    agentType: 'ollama',
+    supportsShellPreflightHook: false,
+    supportsReadonlySandboxing: false,
+    supportsGitWriteGuard: false,
     supportsHardMutationBlocking: false,
   },
 } satisfies Record<RunnerAgentType, ReviewerRuntimeCapabilities>;

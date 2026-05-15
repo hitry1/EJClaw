@@ -105,7 +105,7 @@ import {
   resolveTaskRuntimeIpcPath,
   resolveTaskSessionsPath,
 } from './group-folder.js';
-import type { PairedTask } from './types.js';
+import type { AgentType, PairedTask } from './types.js';
 
 beforeEach(() => {
   _initTestDatabase();
@@ -186,7 +186,7 @@ function getStoredRoleOverridesForLegacyMigration(
   'owner' | 'reviewer' | 'arbiter',
   {
     role: 'owner' | 'reviewer' | 'arbiter';
-    agentType: 'claude-code' | 'codex';
+    agentType: AgentType;
     agentConfig?: unknown;
     createdAt: string;
     updatedAt: string;
@@ -221,7 +221,7 @@ function getStoredRoleOverridesForLegacyMigration(
     'owner' | 'reviewer' | 'arbiter',
     {
       role: 'owner' | 'reviewer' | 'arbiter';
-      agentType: 'claude-code' | 'codex';
+      agentType: AgentType;
       agentConfig?: unknown;
       createdAt: string;
       updatedAt: string;
@@ -292,7 +292,7 @@ function collectLegacyRoomRegistrationSnapshotForTests(
     );
   }
 
-  const agentTypes = new Set<'claude-code' | 'codex'>();
+  const agentTypes = new Set<AgentType>();
   for (const row of rows) {
     const agentType = normalizeStoredAgentType(row.agent_type);
     if (agentType) {
@@ -376,9 +376,7 @@ function buildLegacyRoomMigrationPlanForTests(
   const updatedAt = rows[rows.length - 1]!.added_at;
   const roleOverrides: RoomRoleOverrideSnapshot[] = [];
 
-  const getCapabilityMetadata = (
-    preferredAgentType?: 'claude-code' | 'codex',
-  ) =>
+  const getCapabilityMetadata = (preferredAgentType?: AgentType) =>
     (preferredAgentType
       ? database
           .prepare(

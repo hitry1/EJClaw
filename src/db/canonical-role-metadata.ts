@@ -29,7 +29,10 @@ function resolveFilledRequiredAgentType(
   const inferredAgentType = inferAgentTypeFromServiceShadow(
     input.storedServiceId,
   );
+  // ollama shares the Claude service ID as its shadow — skip conflict check
+  const isOllama = persistedAgentType === 'ollama';
   if (
+    !isOllama &&
     persistedAgentType &&
     inferredAgentType &&
     persistedAgentType !== inferredAgentType
@@ -57,7 +60,9 @@ function readStoredRequiredAgentType(
   const inferredAgentType = inferAgentTypeFromServiceShadow(
     input.storedServiceId,
   );
+  const isOllama = persistedAgentType === 'ollama';
   if (
+    !isOllama &&
     persistedAgentType &&
     inferredAgentType &&
     persistedAgentType !== inferredAgentType

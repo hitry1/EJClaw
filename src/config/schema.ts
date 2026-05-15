@@ -67,6 +67,9 @@ export interface AppConfig {
   providers: {
     claudeDefaultModel: string;
     codexDefaultModel: string;
+    ollamaBaseUrl: string;
+    ollamaModel: string;
+    opencodeModel: string;
   };
   moa: MoaConfig;
   status: {

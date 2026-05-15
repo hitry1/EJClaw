@@ -1,4 +1,5 @@
 import {
+  getLatestOpenPairedTaskForChat,
   getMessagesSinceSeq,
   getNewMessagesBySeq,
   getOpenWorkItemForChat,
@@ -9,11 +10,13 @@ import { processLoopGroupMessages } from './message-runtime-dispatch.js';
 import {
   advanceLastAgentCursor,
   getProcessableMessages,
+  resolveNextTurnAction,
 } from './message-runtime-rules.js';
 import { SERVICE_SESSION_SCOPE } from './config.js';
 import type { schedulePairedFollowUpWithMessageCheck } from './message-runtime-follow-up.js';
 import type { ExecuteTurnFn } from './message-runtime-types.js';
 import { findChannel, formatMessages } from './router.js';
+import { hasReviewerLease } from './service-routing.js';
 import type { Channel, NewMessage, RegisteredGroup } from './types.js';
 
 export async function processMessageLoopTick(args: {
@@ -167,6 +170,35 @@ export function recoverPendingMessages(args: {
           endSeq,
         );
       }
+    }
+
+    if (!hasReviewerLease(chatJid)) {
+      continue;
+    }
+
+    const openPairedTask = getLatestOpenPairedTaskForChat(chatJid);
+    if (!openPairedTask) {
+      continue;
+    }
+
+    const nextAction = resolveNextTurnAction({
+      taskStatus: openPairedTask.status,
+      lastTurnOutputRole: null,
+      lastTurnOutputVerdict: null,
+    });
+
+    if (nextAction.kind !== 'none') {
+      logger.info(
+        {
+          chatJid,
+          group: group.name,
+          taskId: openPairedTask.id,
+          taskStatus: openPairedTask.status,
+          nextAction: nextAction.kind,
+        },
+        'Recovery: found paired task awaiting follow-up turn',
+      );
+      args.enqueueScopedGroupMessageCheck(chatJid, group.folder);
     }
   }
 }

@@ -35,7 +35,7 @@ export interface AgentInput {
   runtimeTaskId?: string;
   useTaskScopedSession?: boolean;
   assistantName?: string;
-  agentType?: 'claude-code' | 'codex';
+  agentType?: 'claude-code' | 'codex' | 'ollama';
   codexGoals?: boolean;
   roomRoleContext?: RoomRoleContext;
 }

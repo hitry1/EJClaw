@@ -84,7 +84,9 @@ export function normalizeRoomModeSource(
 export function normalizeStoredAgentType(
   agentType: string | null | undefined,
 ): AgentType | undefined {
-  return agentType === 'claude-code' || agentType === 'codex'
+  return agentType === 'claude-code' ||
+    agentType === 'codex' ||
+    agentType === 'ollama'
     ? agentType
     : undefined;
 }

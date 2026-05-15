@@ -16,6 +16,9 @@ import { MESSAGE_SOURCE_KIND_MIGRATION } from './013_message-source-kind.js';
 import { WORK_ITEM_ATTACHMENTS_MIGRATION } from './014_work-item-attachments.js';
 import { TURN_PROGRESS_TEXT_MIGRATION } from './015_turn-progress-text.js';
 import { ROOM_SKILL_OVERRIDES_MIGRATION } from './016_room-skill-overrides.js';
+import { OLLAMA_AGENT_TYPE_MIGRATION } from './017_ollama-agent-type.js';
+import { OLLAMA_TURN_ATTEMPTS_MIGRATION } from './018_ollama-turn-attempts.js';
+import { FIX_TURN_ATTEMPTS_FK_MIGRATION } from './019_fix-turn-attempts-fk.js';
 import type {
   SchemaMigrationArgs,
   SchemaMigrationDefinition,
@@ -40,6 +43,9 @@ const ORDERED_SCHEMA_MIGRATIONS: readonly SchemaMigrationDefinition[] = [
   WORK_ITEM_ATTACHMENTS_MIGRATION,
   TURN_PROGRESS_TEXT_MIGRATION,
   ROOM_SKILL_OVERRIDES_MIGRATION,
+  OLLAMA_AGENT_TYPE_MIGRATION,
+  OLLAMA_TURN_ATTEMPTS_MIGRATION,
+  FIX_TURN_ATTEMPTS_FK_MIGRATION,
 ];
 
 function ensureSchemaMigrationsTable(database: Database): void {

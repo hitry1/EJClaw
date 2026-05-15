@@ -63,7 +63,8 @@ function readAgentType(
   fallback?: AgentType,
 ): AgentType | undefined {
   const value = readText(key);
-  if (value === 'codex' || value === 'claude-code') return value;
+  if (value === 'codex' || value === 'claude-code' || value === 'ollama' || value === 'opencode')
+    return value;
   return fallback;
 }
 
@@ -227,7 +228,7 @@ export function loadConfig(): AppConfig {
       ownerAgentType,
       reviewerAgentType,
       reviewerServiceIdForType:
-        reviewerAgentType === 'claude-code'
+        reviewerAgentType === 'claude-code' || reviewerAgentType === 'ollama'
           ? claudeServiceId
           : codexReviewServiceId,
       arbiterAgentType,
@@ -254,6 +255,10 @@ export function loadConfig(): AppConfig {
     providers: {
       claudeDefaultModel: readText('CLAUDE_MODEL') ?? 'claude',
       codexDefaultModel: readText('CODEX_MODEL') ?? 'codex',
+      ollamaBaseUrl:
+        readText('OLLAMA_BASE_URL') ?? 'http://localhost:11434',
+      ollamaModel: readText('OLLAMA_MODEL') ?? 'llama3:latest',
+      opencodeModel: readText('OPENCODE_MODEL') ?? 'claude-opus-4-6',
     },
     moa: buildMoaConfig(),
     status: {

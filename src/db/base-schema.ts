@@ -292,7 +292,7 @@ export function applyBaseSchema(database: Database): void {
           'cancelled'
         )
       ),
-      CHECK (executor_agent_type IN ('claude-code', 'codex') OR executor_agent_type IS NULL)
+      CHECK (executor_agent_type IN ('claude-code', 'codex', 'ollama', 'opencode') OR executor_agent_type IS NULL)
     );
     CREATE INDEX IF NOT EXISTS idx_paired_turn_attempts_turn
       ON paired_turn_attempts(turn_id, attempt_no);

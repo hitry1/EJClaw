@@ -12,13 +12,15 @@ function appendLanguageInstruction(prompt: string): string {
 const PLATFORM_PROMPT_FILES: Record<AgentType, string> = {
   'claude-code': 'claude-platform.md',
   codex: 'codex-platform.md',
+  ollama: 'claude-platform.md',
 };
 
-// SSOT: both agent types use the same paired room prompts.
+// SSOT: all agent types use the same paired room prompts.
 // Role-specific rules (owner vs reviewer) are selected by the caller.
 const PAIRED_ROOM_PROMPT_FILES: Record<AgentType, string> = {
   'claude-code': 'claude-paired-room.md',
   codex: 'claude-paired-room.md',
+  ollama: 'claude-paired-room.md',
 };
 
 const ARBITER_PROMPT_FILE = 'arbiter-paired-room.md';

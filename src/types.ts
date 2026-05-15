@@ -12,7 +12,7 @@ export interface AgentConfig {
   claudeThinkingBudget?: number;
 }
 
-export type AgentType = 'claude-code' | 'codex';
+export type AgentType = 'claude-code' | 'codex' | 'ollama' | 'opencode';
 export type RoomMode = 'single' | 'tribunal';
 
 /** Phase of agent output as emitted by the runner. */
