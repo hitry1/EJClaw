@@ -806,9 +806,18 @@ export function prepareReadonlySessionEnvironment(args: {
       ? fs.readFileSync(globalClaudeMdPath, 'utf-8').trim()
       : undefined;
 
+  // Include room-level CLAUDE.md (e.g. groups/{folder}/CLAUDE.md) so the
+  // reviewer/arbiter inherits per-room instructions such as language preferences.
+  const roomClaudeMdPath = path.join(GROUPS_DIR, groupFolder, 'CLAUDE.md');
+  const roomClaudeMemory =
+    !isMain && fs.existsSync(roomClaudeMdPath)
+      ? fs.readFileSync(roomClaudeMdPath, 'utf-8').trim()
+      : undefined;
+
   const sessionClaudeMd = [
     claudePlatformPrompt,
     claudePairedRoomPrompt,
+    roomClaudeMemory,
     globalClaudeMemory,
     memoryBriefing,
   ]
@@ -852,6 +861,7 @@ export function prepareReadonlySessionEnvironment(args: {
         claudeMdSize: sessionClaudeMd.length,
         hasPlatform: !!claudePlatformPrompt,
         hasPairedRoom: !!claudePairedRoomPrompt,
+        hasRoomMemory: !!roomClaudeMemory,
         hasGlobalMemory: !!globalClaudeMemory,
         hasMemoryBriefing: !!memoryBriefing,
       },
