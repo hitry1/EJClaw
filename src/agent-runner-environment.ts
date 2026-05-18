@@ -9,6 +9,8 @@ import {
   TIMEZONE,
   GEMMA_SERVICE_ID,
   GEMMA_MODEL,
+  OLLAMA_FAILOVER_SERVICE_ID,
+  OLLAMA_FAILOVER_MODEL,
   isReviewService,
 } from './config.js';
 import { logger } from './logger.js';
@@ -695,12 +697,18 @@ export function prepareGroupEnvironment(
   } else if (agentType === 'ollama') {
     if (envVars.OLLAMA_BASE_URL) env.OLLAMA_BASE_URL = envVars.OLLAMA_BASE_URL;
     if (envVars.OLLAMA_MODEL) env.OLLAMA_MODEL = envVars.OLLAMA_MODEL;
+    if (
+      effectiveLease.owner_failover_active === true &&
+      effectiveLease.owner_service_id === OLLAMA_FAILOVER_SERVICE_ID
+    ) {
+      env.OLLAMA_MODEL = OLLAMA_FAILOVER_MODEL;
+    }
   } else {
     prepareClaudeEnvironment({
       env,
       envVars,
       group,
-      serviceId: effectiveLease.owner_service_id
+      serviceId: effectiveLease.owner_service_id,
     });
   }
 

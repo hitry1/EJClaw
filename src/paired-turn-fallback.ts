@@ -1,6 +1,10 @@
 import type { AgentTriggerReason } from './agent-error-detection.js';
 import type { AgentType, PairedRoomRole } from './types.js';
-import { activateFailover, isGlobalFailoverActive, getGlobalFailoverLevel } from './service-routing.js';
+import {
+  activateFailover,
+  isGlobalFailoverActive,
+  getGlobalFailoverLevel,
+} from './service-routing.js';
 import { FailoverLevel } from './config.js';
 
 const CODEX_HANDOFF_REASONS = new Set<AgentTriggerReason>([
@@ -61,7 +65,7 @@ export function resolveFallbackHandoff(args: {
     };
   }
 
-  // Tiered Fallback Logic: NONE -> GEMMA -> CODEX
+  // Tiered Fallback Logic: NONE -> GEMMA -> CODEX -> OLLAMA
   const currentLevel = isGlobalFailoverActive()
     ? getGlobalFailoverLevel()
     : FailoverLevel.NONE;
@@ -81,8 +85,13 @@ export function resolveFallbackHandoff(args: {
     targetLevel = FailoverLevel.CODEX;
     logMessage = `Gemma high-limit model also unavailable (${args.reason}), falling back to Codex`;
     reasonPrefix = 'codex-gemma';
+  } else if (currentLevel === FailoverLevel.CODEX) {
+    targetAgentType = 'ollama';
+    targetLevel = FailoverLevel.OLLAMA;
+    logMessage = `Codex also unavailable (${args.reason}), falling back to local Ollama qwen2.5-coder:7b`;
+    reasonPrefix = 'ollama-codex';
   } else {
-    // Already on Codex
+    // Already on Ollama — final tier, no further fallback
     return { type: 'none' };
   }
 

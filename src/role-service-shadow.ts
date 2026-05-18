@@ -2,6 +2,7 @@ import {
   ARBITER_SERVICE_ID,
   CLAUDE_SERVICE_ID,
   GEMMA_SERVICE_ID,
+  OLLAMA_FAILOVER_SERVICE_ID,
   CODEX_MAIN_SERVICE_ID,
   CODEX_REVIEW_SERVICE_ID,
   normalizeServiceId,
@@ -37,6 +38,9 @@ export function inferAgentTypeFromServiceShadow(
   const normalized = normalizeServiceId(serviceId);
   if (normalized === CLAUDE_SERVICE_ID || normalized === GEMMA_SERVICE_ID) {
     return 'claude-code';
+  }
+  if (normalized === OLLAMA_FAILOVER_SERVICE_ID) {
+    return 'ollama';
   }
   if (
     normalized === CODEX_MAIN_SERVICE_ID ||

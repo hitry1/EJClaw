@@ -3,6 +3,7 @@ import {
   ARBITER_SERVICE_ID,
   CODEX_REVIEW_SERVICE_ID,
   GEMMA_SERVICE_ID,
+  OLLAMA_FAILOVER_SERVICE_ID,
   OWNER_AGENT_TYPE,
   REVIEWER_AGENT_TYPE,
   SERVICE_ID,
@@ -180,7 +181,9 @@ export function getEffectiveChannelLease(
     const ownerServiceId =
       globalFailoverLevel === FailoverLevel.GEMMA
         ? GEMMA_SERVICE_ID
-        : CODEX_REVIEW_SERVICE_ID;
+        : globalFailoverLevel === FailoverLevel.OLLAMA
+          ? OLLAMA_FAILOVER_SERVICE_ID
+          : CODEX_REVIEW_SERVICE_ID;
 
     return {
       ...baseLease,
@@ -288,15 +291,23 @@ let globalFailoverLevel = FailoverLevel.NONE;
 let globalFailoverReason: string | null = null;
 let globalFailoverActivatedAt: string | null = null;
 
-export function activateFailover(_chatJid: string, level: FailoverLevel, reason: string): void {
+export function activateFailover(
+  _chatJid: string,
+  level: FailoverLevel,
+  reason: string,
+): void {
   globalFailoverLevel = level;
   globalFailoverReason = reason;
   globalFailoverActivatedAt = new Date().toISOString();
+  const targetName =
+    level === FailoverLevel.GEMMA
+      ? 'Gemma'
+      : level === FailoverLevel.OLLAMA
+        ? 'Ollama (qwen2.5-coder:7b)'
+        : 'Codex';
   logger.warn(
     { reason, activatedAt: globalFailoverActivatedAt, level },
-    `Global failover activated (Level: ${FailoverLevel[level]}) — owner execution switching to ${
-      level === FailoverLevel.GEMMA ? 'Gemma' : 'Codex'
-    } across all channels`,
+    `Global failover activated (Level: ${FailoverLevel[level]}) — owner execution switching to ${targetName} across all channels`,
   );
 }
 
