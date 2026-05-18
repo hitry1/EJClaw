@@ -851,20 +851,37 @@ export async function startUnifiedDashboard(
       applyCodexRefresh(r);
       return refreshActiveCodexUsage().then(applyCodexRefresh);
     })
-    .then(() => runCodexWarmup());
+    .then(() => runCodexWarmup())
+    .catch((err) => {
+      logger.warn({ err }, 'Initial Codex usage refresh chain failed');
+    });
   setInterval(
-    () => void refreshActiveCodexUsage().then(applyCodexRefresh),
+    () =>
+      void refreshActiveCodexUsage()
+        .then(applyCodexRefresh)
+        .catch((err) => {
+          logger.warn({ err }, 'Periodic active Codex usage refresh failed');
+        }),
     opts.usageUpdateInterval,
   );
   setInterval(
     () =>
       void refreshAllCodexAccountUsage()
         .then(applyCodexRefresh)
-        .then(() => runCodexWarmup()),
+        .then(() => runCodexWarmup())
+        .catch((err) => {
+          logger.warn({ err }, 'Periodic full Codex usage scan failed');
+        }),
     CODEX_FULL_SCAN_INTERVAL,
   );
   if (CODEX_WARMUP_CONFIG.enabled) {
-    setInterval(() => void runCodexWarmup(), CODEX_WARMUP_CONFIG.intervalMs);
+    setInterval(
+      () =>
+        void runCodexWarmup().catch((err) => {
+          logger.warn({ err }, 'Periodic Codex warmup failed');
+        }),
+      CODEX_WARMUP_CONFIG.intervalMs,
+    );
   }
 
   logger.info(

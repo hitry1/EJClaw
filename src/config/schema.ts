@@ -69,7 +69,6 @@ export interface AppConfig {
     codexDefaultModel: string;
     ollamaBaseUrl: string;
     ollamaModel: string;
-    opencodeModel: string;
   };
   moa: MoaConfig;
   status: {

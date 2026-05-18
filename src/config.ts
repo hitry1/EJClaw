@@ -11,6 +11,14 @@ export const ASSISTANT_NAME = CONFIG.assistant.name;
 export const ASSISTANT_HAS_OWN_NUMBER = CONFIG.assistant.hasOwnNumber;
 export const SERVICE_ID = CONFIG.service.id;
 export const CLAUDE_SERVICE_ID = CONFIG.service.claudeId;
+export const GEMMA_SERVICE_ID = 'claude-gemma';
+export const GEMMA_MODEL = 'gemma4:31b-cloud';
+
+export enum FailoverLevel {
+  NONE = 0,
+  GEMMA = 1,
+  CODEX = 2,
+}
 export const CODEX_MAIN_SERVICE_ID = CONFIG.service.codexMainId;
 export const CODEX_REVIEW_SERVICE_ID = CONFIG.service.codexReviewId;
 

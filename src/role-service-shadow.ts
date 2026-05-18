@@ -1,6 +1,7 @@
 import {
   ARBITER_SERVICE_ID,
   CLAUDE_SERVICE_ID,
+  GEMMA_SERVICE_ID,
   CODEX_MAIN_SERVICE_ID,
   CODEX_REVIEW_SERVICE_ID,
   normalizeServiceId,
@@ -14,7 +15,7 @@ export function resolveRoleServiceShadow(
   if (!agentType) {
     return null;
   }
-  if (agentType === 'claude-code' || agentType === 'ollama' || agentType === 'opencode') {
+  if (agentType === 'claude-code' || agentType === 'ollama') {
     return CLAUDE_SERVICE_ID;
   }
   if (role === 'owner') {
@@ -34,7 +35,7 @@ export function inferAgentTypeFromServiceShadow(
   }
 
   const normalized = normalizeServiceId(serviceId);
-  if (normalized === CLAUDE_SERVICE_ID) {
+  if (normalized === CLAUDE_SERVICE_ID || normalized === GEMMA_SERVICE_ID) {
     return 'claude-code';
   }
   if (

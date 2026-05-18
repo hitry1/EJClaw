@@ -63,6 +63,7 @@ export function runSpawnedAgentProcess(
 
     // Streaming output: parse OUTPUT_START/END marker pairs as they arrive.
     let parseBuffer = '';
+    let parseBufferTruncated = false;
     let newSessionId: string | undefined;
     let outputChain = Promise.resolve();
 
@@ -121,7 +122,32 @@ export function runSpawnedAgentProcess(
         return;
       }
 
-      parseBuffer += chunk;
+      // Guard against unbounded parseBuffer growth: if it exceeds the output
+      // size limit without producing a complete marker pair, discard it.
+      if (parseBufferTruncated) {
+        // Still scan for new marker-pair starts so we can recover
+        const recoveryIdx = chunk.indexOf(OUTPUT_START_MARKER);
+        if (recoveryIdx === -1) return;
+        parseBuffer = chunk.slice(recoveryIdx);
+        parseBufferTruncated = false;
+      } else {
+        parseBuffer += chunk;
+        if (parseBuffer.length > AGENT_MAX_OUTPUT_SIZE) {
+          logger.warn(
+            {
+              group: group.name,
+              chatJid: input.chatJid,
+              runId: input.runId,
+              bufferSize: parseBuffer.length,
+            },
+            'Parse buffer exceeded size limit, discarding incomplete data',
+          );
+          parseBuffer = '';
+          parseBufferTruncated = true;
+          return;
+        }
+      }
+
       let startIdx: number;
       while ((startIdx = parseBuffer.indexOf(OUTPUT_START_MARKER)) !== -1) {
         const endIdx = parseBuffer.indexOf(OUTPUT_END_MARKER, startIdx);
@@ -151,7 +177,19 @@ export function runSpawnedAgentProcess(
               'Streamed agent error output',
             );
           }
-          outputChain = outputChain.then(() => onOutput(parsed));
+          outputChain = outputChain
+            .then(() => onOutput(parsed))
+            .catch((outputErr) => {
+              logger.warn(
+                {
+                  group: group.name,
+                  chatJid: input.chatJid,
+                  runId: input.runId,
+                  err: outputErr,
+                },
+                'Error in streamed output handler',
+              );
+            });
         } catch (err) {
           logger.warn(
             {
@@ -211,9 +249,8 @@ export function runSpawnedAgentProcess(
 
       if (timedOut) {
         const ts = new Date().toISOString().replace(/[:.]/g, '-');
-        fs.writeFileSync(
-          path.join(logsDir, `agent-${input.runId || 'adhoc'}-${ts}.log`),
-          [
+        // Use async write to avoid blocking the event loop during cleanup
+        const logContent = [
             `=== Agent Run Log (TIMEOUT) ===`,
             `Timestamp: ${new Date().toISOString()}`,
             `Group: ${group.name}`,
@@ -224,8 +261,14 @@ export function runSpawnedAgentProcess(
             `Exit Code: ${code}`,
             `Signal: ${signal}`,
             `Had Streaming Output: ${hadStreamingOutput}`,
-          ].join('\n'),
-        );
+          ].join('\n');
+        const logPath = path.join(logsDir, `agent-${input.runId || 'adhoc'}-${ts}.log`);
+        fs.promises.writeFile(logPath, logContent).catch((writeErr) => {
+          logger.warn(
+            { err: writeErr, logPath },
+            'Failed to write agent timeout log file',
+          );
+        });
 
         if (hadStreamingOutput) {
           logger.info(

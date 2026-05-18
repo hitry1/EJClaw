@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveCodexFallbackHandoff } from './paired-turn-fallback.js';
+import { resolveFallbackHandoff } from './paired-turn-fallback.js';
 
-describe('resolveCodexFallbackHandoff', () => {
+describe('resolveFallbackHandoff', () => {
   it('returns a reviewer codex handoff plan for reviewer auth failures', () => {
-    const result = resolveCodexFallbackHandoff({
+    const result = resolveFallbackHandoff({
       activeRole: 'reviewer',
       effectiveAgentType: 'claude-code',
       hasReviewer: true,
@@ -37,7 +37,7 @@ describe('resolveCodexFallbackHandoff', () => {
   });
 
   it('returns an arbiter codex handoff plan for arbiter auth failures', () => {
-    const result = resolveCodexFallbackHandoff({
+    const result = resolveFallbackHandoff({
       activeRole: 'arbiter',
       effectiveAgentType: 'claude-code',
       hasReviewer: true,
@@ -68,7 +68,7 @@ describe('resolveCodexFallbackHandoff', () => {
   });
 
   it('returns an owner codex handoff plan and failover activation for owner failures', () => {
-    const result = resolveCodexFallbackHandoff({
+    const result = resolveFallbackHandoff({
       activeRole: 'owner',
       effectiveAgentType: 'claude-code',
       hasReviewer: true,
@@ -100,7 +100,7 @@ describe('resolveCodexFallbackHandoff', () => {
   });
 
   it('skips handoff when fallback is disabled for the role', () => {
-    const result = resolveCodexFallbackHandoff({
+    const result = resolveFallbackHandoff({
       activeRole: 'owner',
       effectiveAgentType: 'claude-code',
       hasReviewer: true,
@@ -117,7 +117,7 @@ describe('resolveCodexFallbackHandoff', () => {
   });
 
   it('returns none when visible output was already emitted', () => {
-    const result = resolveCodexFallbackHandoff({
+    const result = resolveFallbackHandoff({
       activeRole: 'reviewer',
       effectiveAgentType: 'claude-code',
       hasReviewer: true,
@@ -131,7 +131,7 @@ describe('resolveCodexFallbackHandoff', () => {
   });
 
   it('returns none when no reviewer is configured for the room', () => {
-    const result = resolveCodexFallbackHandoff({
+    const result = resolveFallbackHandoff({
       activeRole: 'owner',
       effectiveAgentType: 'claude-code',
       hasReviewer: false,

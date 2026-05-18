@@ -109,7 +109,7 @@ vi.mock('./db.js', () => {
 });
 
 vi.mock('./service-routing.js', () => ({
-  activateCodexFailover: vi.fn(),
+  activateFailover: vi.fn(),
   clearGlobalFailover: vi.fn(),
   getEffectiveChannelLease: vi.fn(() => ({
     chat_jid: 'group@test',
@@ -3178,7 +3178,7 @@ describe('runAgentForGroup Claude rotation', () => {
     expect(agentRunner.runAgentProcess).toHaveBeenCalledTimes(2);
     expect(deps.clearSession).toHaveBeenCalledTimes(2);
     expect(outputs).toEqual([]);
-    expect(serviceRouting.activateCodexFailover).toHaveBeenCalledWith(
+    expect(serviceRouting.activateFailover).toHaveBeenCalledWith(
       'group@test',
       'claude-session-failure',
     );
@@ -3244,7 +3244,7 @@ describe('runAgentForGroup Claude rotation', () => {
     expect(agentRunner.runAgentProcess).toHaveBeenCalledTimes(2);
     expect(tokenRotation.rotateToken).toHaveBeenCalledTimes(2);
     expect(outputs).toEqual([]);
-    expect(serviceRouting.activateCodexFailover).toHaveBeenCalledWith(
+    expect(serviceRouting.activateFailover).toHaveBeenCalledWith(
       'group@test',
       'claude-usage-exhausted',
     );
@@ -3295,7 +3295,7 @@ describe('runAgentForGroup Claude rotation', () => {
     expect(result).toBe('success');
     expect(agentRunner.runAgentProcess).toHaveBeenCalledTimes(2);
     expect(deps.clearSession).toHaveBeenCalledTimes(2);
-    expect(serviceRouting.activateCodexFailover).toHaveBeenCalledWith(
+    expect(serviceRouting.activateFailover).toHaveBeenCalledWith(
       'group@test',
       'claude-session-failure',
     );
@@ -3713,7 +3713,7 @@ describe('runAgentForGroup Claude rotation', () => {
     expect(agentRunner.runAgentProcess).toHaveBeenCalledTimes(2);
     expect(tokenRotation.rotateToken).toHaveBeenCalledTimes(2);
     expect(outputs).toEqual([]);
-    expect(serviceRouting.activateCodexFailover).toHaveBeenCalledWith(
+    expect(serviceRouting.activateFailover).toHaveBeenCalledWith(
       'group@test',
       'claude-org-access-denied',
     );

@@ -1,8 +1,8 @@
 import { getRoleModelConfig } from './config.js';
 import { createServiceHandoff } from './db.js';
 import type { AgentTriggerReason } from './agent-error-detection.js';
-import { resolveCodexFallbackHandoff } from './paired-turn-fallback.js';
-import { activateCodexFailover } from './service-routing.js';
+import { resolveFallbackHandoff } from './paired-turn-fallback.js';
+import { activateFailover } from './service-routing.js';
 import type { PairedTurnIdentity } from './paired-turn-identity.js';
 import type { AgentType, PairedRoomRole, RegisteredGroup } from './types.js';
 
@@ -28,7 +28,7 @@ interface MessageAgentExecutorHandoffArgs {
 export function handoffMessageAgentExecutionToCodex(
   args: MessageAgentExecutorHandoffArgs,
 ): boolean {
-  const handoffResolution = resolveCodexFallbackHandoff({
+  const handoffResolution = resolveFallbackHandoff({
     activeRole: args.activeRole,
     effectiveAgentType: args.effectiveAgentType,
     hasReviewer: args.hasReviewer,
@@ -49,9 +49,10 @@ export function handoffMessageAgentExecutionToCodex(
     return false;
   }
 
-  if (handoffResolution.plan.activateOwnerFailoverReason) {
-    activateCodexFailover(
+  if (handoffResolution.plan.targetLevel && handoffResolution.plan.activateOwnerFailoverReason) {
+    activateFailover(
       args.chatJid,
+      handoffResolution.plan.targetLevel,
       handoffResolution.plan.activateOwnerFailoverReason,
     );
   }

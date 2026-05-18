@@ -7,6 +7,8 @@ import {
   SERVICE_ID,
   SERVICE_SESSION_SCOPE,
   TIMEZONE,
+  GEMMA_SERVICE_ID,
+  GEMMA_MODEL,
   isReviewService,
 } from './config.js';
 import { logger } from './logger.js';
@@ -299,6 +301,7 @@ function prepareClaudeEnvironment(args: {
   env: Record<string, string>;
   envVars: Record<string, string>;
   group: RegisteredGroup;
+  serviceId: string;
 }): void {
   if (args.envVars.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY) {
     args.env.ANTHROPIC_API_KEY =
@@ -339,6 +342,9 @@ function prepareClaudeEnvironment(args: {
     const value =
       args.envVars[key as keyof typeof args.envVars] || process.env[key];
     if (value) args.env[key] = value;
+  }
+  if (args.serviceId === GEMMA_SERVICE_ID) {
+    args.env.CLAUDE_MODEL = GEMMA_MODEL;
   }
   if (args.group.agentConfig?.claudeModel) {
     args.env.CLAUDE_MODEL = args.group.agentConfig.claudeModel;
@@ -637,9 +643,7 @@ export function prepareGroupEnvironment(
       ? 'codex-runner'
       : agentType === 'ollama'
         ? 'ollama-runner'
-        : agentType === 'opencode'
-          ? 'opencode-runner'
-          : 'agent-runner';
+        : 'agent-runner';
   const runnerDir = path.join(projectRoot, 'runners', runnerDirName);
 
   const envVars = readEnvFile([
@@ -657,7 +661,6 @@ export function prepareGroupEnvironment(
     'CODEX_GOALS',
     'OLLAMA_BASE_URL',
     'OLLAMA_MODEL',
-    'OPENCODE_MODEL',
   ]);
 
   const env = buildBaseRunnerEnv({
@@ -693,7 +696,12 @@ export function prepareGroupEnvironment(
     if (envVars.OLLAMA_BASE_URL) env.OLLAMA_BASE_URL = envVars.OLLAMA_BASE_URL;
     if (envVars.OLLAMA_MODEL) env.OLLAMA_MODEL = envVars.OLLAMA_MODEL;
   } else {
-    prepareClaudeEnvironment({ env, envVars, group });
+    prepareClaudeEnvironment({
+      env,
+      envVars,
+      group,
+      serviceId: effectiveLease.owner_service_id
+    });
   }
 
   return { env, groupDir, runnerDir };

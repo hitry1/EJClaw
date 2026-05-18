@@ -22,7 +22,9 @@ export const FIX_TURN_ATTEMPTS_FK_MIGRATION: SchemaMigrationDefinition = {
     const colList = cols.join(', ');
     const db = database;
 
-    db.exec(`ALTER TABLE paired_turn_attempts RENAME TO paired_turn_attempts_old`);
+    db.exec(
+      `ALTER TABLE paired_turn_attempts RENAME TO paired_turn_attempts_old`,
+    );
 
     db.exec(`CREATE TABLE paired_turn_attempts (
       attempt_id TEXT NOT NULL PRIMARY KEY,
@@ -70,9 +72,15 @@ export const FIX_TURN_ATTEMPTS_FK_MIGRATION: SchemaMigrationDefinition = {
       CHECK (executor_agent_type IN ('claude-code', 'codex', 'ollama', 'opencode') OR executor_agent_type IS NULL)
     )`);
 
-    db.exec(`INSERT INTO paired_turn_attempts (${colList}) SELECT ${colList} FROM paired_turn_attempts_old`);
+    db.exec(
+      `INSERT INTO paired_turn_attempts (${colList}) SELECT ${colList} FROM paired_turn_attempts_old`,
+    );
     db.exec(`DROP TABLE paired_turn_attempts_old`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_paired_turn_attempts_turn ON paired_turn_attempts(turn_id, attempt_no)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_paired_turn_attempts_task ON paired_turn_attempts(task_id, task_updated_at, attempt_no)`);
+    db.exec(
+      `CREATE INDEX IF NOT EXISTS idx_paired_turn_attempts_turn ON paired_turn_attempts(turn_id, attempt_no)`,
+    );
+    db.exec(
+      `CREATE INDEX IF NOT EXISTS idx_paired_turn_attempts_task ON paired_turn_attempts(task_id, task_updated_at, attempt_no)`,
+    );
   },
 };

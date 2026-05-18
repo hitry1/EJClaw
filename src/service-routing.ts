@@ -2,9 +2,11 @@ import {
   ARBITER_AGENT_TYPE,
   ARBITER_SERVICE_ID,
   CODEX_REVIEW_SERVICE_ID,
+  GEMMA_SERVICE_ID,
   OWNER_AGENT_TYPE,
   REVIEWER_AGENT_TYPE,
   SERVICE_ID,
+  FailoverLevel,
   isArbiterEnabled,
   normalizeServiceId,
 } from './config.js';
@@ -173,11 +175,16 @@ export function getEffectiveChannelLease(
 ): EffectiveChannelLease {
   // Global failover overrides the owner execution backend for all channels,
   // while preserving the room's reviewer/arbiter role assignments.
-  if (globalFailoverActive) {
+  if (globalFailoverLevel !== FailoverLevel.NONE) {
     const baseLease = getStoredOrDefaultLease(chatJid);
+    const ownerServiceId =
+      globalFailoverLevel === FailoverLevel.GEMMA
+        ? GEMMA_SERVICE_ID
+        : CODEX_REVIEW_SERVICE_ID;
+
     return {
       ...baseLease,
-      owner_service_id: CODEX_REVIEW_SERVICE_ID,
+      owner_service_id: ownerServiceId,
       owner_failover_active: true,
       activated_at: globalFailoverActivatedAt,
       reason: globalFailoverReason,
@@ -277,22 +284,28 @@ export function shouldServiceProcessChat(
 // ── Global failover ──────────────────────────────────────────────
 // Claude API limits are account-level, so owner failover applies to all channels.
 
-let globalFailoverActive = false;
+let globalFailoverLevel = FailoverLevel.NONE;
 let globalFailoverReason: string | null = null;
 let globalFailoverActivatedAt: string | null = null;
 
-export function activateCodexFailover(_chatJid: string, reason: string): void {
-  globalFailoverActive = true;
+export function activateFailover(_chatJid: string, level: FailoverLevel, reason: string): void {
+  globalFailoverLevel = level;
   globalFailoverReason = reason;
   globalFailoverActivatedAt = new Date().toISOString();
   logger.warn(
-    { reason, activatedAt: globalFailoverActivatedAt },
-    'Global failover activated — owner execution switching to codex across all channels',
+    { reason, activatedAt: globalFailoverActivatedAt, level },
+    `Global failover activated (Level: ${FailoverLevel[level]}) — owner execution switching to ${
+      level === FailoverLevel.GEMMA ? 'Gemma' : 'Codex'
+    } across all channels`,
   );
 }
 
 export function isGlobalFailoverActive(): boolean {
-  return globalFailoverActive;
+  return globalFailoverLevel !== FailoverLevel.NONE;
+}
+
+export function getGlobalFailoverLevel(): FailoverLevel {
+  return globalFailoverLevel;
 }
 
 export function getGlobalFailoverInfo(): {
@@ -301,15 +314,15 @@ export function getGlobalFailoverInfo(): {
   activatedAt: string | null;
 } {
   return {
-    active: globalFailoverActive,
+    active: globalFailoverLevel !== FailoverLevel.NONE,
     reason: globalFailoverReason,
     activatedAt: globalFailoverActivatedAt,
   };
 }
 
 export function clearGlobalFailover(): void {
-  if (!globalFailoverActive) return;
-  globalFailoverActive = false;
+  if (globalFailoverLevel === FailoverLevel.NONE) return;
+  globalFailoverLevel = FailoverLevel.NONE;
   globalFailoverReason = null;
   globalFailoverActivatedAt = null;
   logger.info('Global failover cleared — resuming normal owner routing');
@@ -328,7 +341,7 @@ export interface ActiveFailoverLease {
 
 export function getActiveCodexFailoverLeases(): ActiveFailoverLease[] {
   // Global failover: report as a single pseudo-lease
-  if (globalFailoverActive) {
+  if (globalFailoverLevel !== FailoverLevel.NONE) {
     return [{ chatJid: '*', activatedAt: globalFailoverActivatedAt }];
   }
   return [];

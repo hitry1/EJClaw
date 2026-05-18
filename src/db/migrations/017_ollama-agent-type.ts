@@ -14,7 +14,10 @@ export const OLLAMA_AGENT_TYPE_MIGRATION: SchemaMigrationDefinition = {
       .get() as { sql?: string } | undefined;
     const ptSql = ptSqlRow?.sql ?? '';
 
-    if (ptSql.includes("'claude-code', 'codex'") && !ptSql.includes("'ollama'")) {
+    if (
+      ptSql.includes("'claude-code', 'codex'") &&
+      !ptSql.includes("'ollama'")
+    ) {
       const cols = getTableColumns(database, 'paired_tasks');
       const colList = cols.join(', ');
 
@@ -49,10 +52,14 @@ export const OLLAMA_AGENT_TYPE_MIGRATION: SchemaMigrationDefinition = {
           CHECK (arbiter_agent_type IN ('claude-code', 'codex', 'ollama', 'opencode') OR arbiter_agent_type IS NULL)
         )`);
 
-      database.exec(`INSERT INTO paired_tasks_new (${colList}) SELECT ${colList} FROM paired_tasks`);
+      database.exec(
+        `INSERT INTO paired_tasks_new (${colList}) SELECT ${colList} FROM paired_tasks`,
+      );
       database.exec(`DROP TABLE paired_tasks`);
       database.exec(`ALTER TABLE paired_tasks_new RENAME TO paired_tasks`);
-      database.exec(`CREATE INDEX IF NOT EXISTS idx_paired_tasks_chat_status ON paired_tasks(chat_jid, status, updated_at)`);
+      database.exec(
+        `CREATE INDEX IF NOT EXISTS idx_paired_tasks_chat_status ON paired_tasks(chat_jid, status, updated_at)`,
+      );
     }
   },
 };

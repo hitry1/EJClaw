@@ -15,7 +15,7 @@ import {
   getLatestOpenPairedTaskForChat,
   markPairedTurnRunning,
 } from './db.js';
-import { createScopedLogger } from './logger.js';
+import { createScopedLogger, logger } from './logger.js';
 import { buildRoomMemoryBriefing } from './sqlite-memory-store.js';
 import type { PreparedPairedExecutionContext } from './paired-execution-context.js';
 import { preparePairedExecutionContext } from './paired-execution-context.js';
@@ -144,7 +144,13 @@ export async function prepareMessageAgentExecutionTarget(
     : await buildRoomMemoryBriefing({
         groupFolder: group.folder,
         groupName: group.name,
-      }).catch(() => undefined);
+      }).catch((err) => {
+        logger.debug(
+          { err, groupFolder: group.folder },
+          'Failed to build room memory briefing, proceeding without it',
+        );
+        return undefined;
+      });
 
   const tasks = getAllTasks(roleAgentPlan.ownerAgentType);
   writeTasksSnapshot(

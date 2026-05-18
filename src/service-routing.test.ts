@@ -10,13 +10,14 @@ import {
   setExplicitRoomMode,
 } from './db.js';
 import {
-  activateCodexFailover,
+  activateFailover,
   clearGlobalFailover,
   getEffectiveChannelLease,
   getGlobalFailoverInfo,
   refreshChannelOwnerCache,
   resolveLeaseServiceId,
 } from './service-routing.js';
+import { FailoverLevel } from './config.js';
 
 beforeEach(() => {
   _initTestDatabase();
@@ -41,7 +42,7 @@ describe('service-routing global failover', () => {
       agentType: 'codex',
     });
 
-    activateCodexFailover('dc:paired', 'claude-429');
+    activateFailover('dc:paired', FailoverLevel.CODEX, 'claude-429');
 
     // Global failover applies to ALL channels
     expect(getGlobalFailoverInfo().active).toBe(true);
@@ -80,7 +81,7 @@ describe('service-routing global failover', () => {
     setExplicitRoomMode('dc:tribunal', 'tribunal');
     const baseLease = getEffectiveChannelLease('dc:tribunal');
 
-    activateCodexFailover('dc:tribunal', 'claude-429');
+    activateFailover('dc:tribunal', FailoverLevel.CODEX, 'claude-429');
 
     expect(getEffectiveChannelLease('dc:tribunal')).toMatchObject({
       chat_jid: 'dc:tribunal',
@@ -109,7 +110,7 @@ describe('service-routing global failover', () => {
       agentType: 'codex',
     });
 
-    activateCodexFailover('dc:paired', 'claude-429');
+    activateFailover('dc:paired', FailoverLevel.CODEX, 'claude-429');
     clearGlobalFailover();
 
     expect(getGlobalFailoverInfo().active).toBe(false);

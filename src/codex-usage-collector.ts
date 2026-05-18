@@ -98,7 +98,13 @@ export async function fetchCodexUsage(
       return;
     }
 
-    proc.on('error', () => finish(null));
+    proc.on('error', (err) => {
+      logger.debug(
+        { err: err instanceof Error ? err.message : String(err) },
+        'Codex app-server process error',
+      );
+      finish(null);
+    });
     proc.on('close', () => finish(null));
 
     let buffer = '';

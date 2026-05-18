@@ -503,16 +503,29 @@ export class MessageTurnController {
       this.latestProgressText = heading;
       this.latestProgressTextForFinal = heading;
     }
-    void this.sendProgressMessage(heading).then(() => {
-      this.progressCreating = false;
-      this.ensureProgressTicker();
-      if (
-        (this.toolActivities.length > 0 || this.subagents.size > 0) &&
-        this.progressMessageId
-      ) {
-        void this.syncTrackedProgressMessage();
-      }
-    });
+    void this.sendProgressMessage(heading)
+      .then(() => {
+        this.progressCreating = false;
+        this.ensureProgressTicker();
+        if (
+          (this.toolActivities.length > 0 || this.subagents.size > 0) &&
+          this.progressMessageId
+        ) {
+          void this.syncTrackedProgressMessage().catch((err) => {
+            this.log.warn(
+              { err, runId: this.options.runId },
+              'Failed to sync tracked progress after creation',
+            );
+          });
+        }
+      })
+      .catch((err) => {
+        this.progressCreating = false;
+        this.log.warn(
+          { err, runId: this.options.runId },
+          'Failed to create initial progress message',
+        );
+      });
     this.pendingProgressText = null;
   }
 
@@ -524,7 +537,12 @@ export class MessageTurnController {
    */
   private bufferProgress(text: string): void {
     if (this.pendingProgressText) {
-      void this.sendProgressMessage(this.pendingProgressText);
+      void this.sendProgressMessage(this.pendingProgressText).catch((err) => {
+        this.log.warn(
+          { err, runId: this.options.runId },
+          'Failed to flush buffered progress message',
+        );
+      });
       this.toolActivities = [];
     }
     this.pendingProgressText = text;

@@ -258,6 +258,8 @@ function createRoomsTimelineStream(
         if (closed) return;
         closed = true;
         clearInterval(interval);
+        // Remove the abort listener to avoid holding a reference after close
+        request.signal.removeEventListener('abort', close);
         try {
           controller.close();
         } catch {

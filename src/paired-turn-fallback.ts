@@ -1,5 +1,7 @@
 import type { AgentTriggerReason } from './agent-error-detection.js';
 import type { AgentType, PairedRoomRole } from './types.js';
+import { activateFailover, isGlobalFailoverActive, getGlobalFailoverLevel } from './service-routing.js';
+import { FailoverLevel } from './config.js';
 
 const CODEX_HANDOFF_REASONS = new Set<AgentTriggerReason>([
   '429',
@@ -9,11 +11,11 @@ const CODEX_HANDOFF_REASONS = new Set<AgentTriggerReason>([
   'session-failure',
 ]);
 
-export interface CodexFallbackHandoffRecord {
+export interface FallbackHandoffRecord {
   source_role: PairedRoomRole;
   target_role: PairedRoomRole;
   source_agent_type: AgentType;
-  target_agent_type: 'codex';
+  target_agent_type: AgentType;
   prompt: string;
   start_seq: number | null;
   end_seq: number | null;
@@ -21,18 +23,19 @@ export interface CodexFallbackHandoffRecord {
   intended_role: PairedRoomRole;
 }
 
-export interface CodexFallbackHandoffPlan {
-  handoff: CodexFallbackHandoffRecord;
+export interface FallbackHandoffPlan {
+  handoff: FallbackHandoffRecord;
   activateOwnerFailoverReason?: string;
+  targetLevel?: FailoverLevel;
   logMessage: string;
 }
 
-export type CodexFallbackResolution =
+export type FallbackResolution =
   | { type: 'none' }
   | { type: 'skip'; logMessage: string }
-  | { type: 'handoff'; plan: CodexFallbackHandoffPlan };
+  | { type: 'handoff'; plan: FallbackHandoffPlan };
 
-export function resolveCodexFallbackHandoff(args: {
+export function resolveFallbackHandoff(args: {
   activeRole: PairedRoomRole;
   effectiveAgentType: AgentType;
   hasReviewer: boolean;
@@ -42,7 +45,7 @@ export function resolveCodexFallbackHandoff(args: {
   prompt: string;
   startSeq?: number | null;
   endSeq?: number | null;
-}): CodexFallbackResolution {
+}): FallbackResolution {
   if (args.sawVisibleOutput || !CODEX_HANDOFF_REASONS.has(args.reason)) {
     return { type: 'none' };
   }
@@ -58,10 +61,35 @@ export function resolveCodexFallbackHandoff(args: {
     };
   }
 
+  // Tiered Fallback Logic: NONE -> GEMMA -> CODEX
+  const currentLevel = isGlobalFailoverActive()
+    ? getGlobalFailoverLevel()
+    : FailoverLevel.NONE;
+
+  let targetAgentType: AgentType;
+  let targetLevel: FailoverLevel;
+  let logMessage: string;
+  let reasonPrefix: string;
+
+  if (currentLevel === FailoverLevel.NONE) {
+    targetAgentType = 'claude-code';
+    targetLevel = FailoverLevel.GEMMA;
+    logMessage = `Claude unavailable (${args.reason}), falling back to Gemma high-limit model`;
+    reasonPrefix = 'gemma-claude';
+  } else if (currentLevel === FailoverLevel.GEMMA) {
+    targetAgentType = 'codex';
+    targetLevel = FailoverLevel.CODEX;
+    logMessage = `Gemma high-limit model also unavailable (${args.reason}), falling back to Codex`;
+    reasonPrefix = 'codex-gemma';
+  } else {
+    // Already on Codex
+    return { type: 'none' };
+  }
+
   const baseHandoff = {
     source_role: args.activeRole,
     source_agent_type: args.effectiveAgentType,
-    target_agent_type: 'codex' as const,
+    target_agent_type: targetAgentType,
     prompt: args.prompt,
     start_seq: args.startSeq ?? null,
     end_seq: args.endSeq ?? null,
@@ -75,10 +103,10 @@ export function resolveCodexFallbackHandoff(args: {
           ...baseHandoff,
           target_role: 'arbiter',
           intended_role: 'arbiter',
-          reason: `arbiter-claude-${args.reason}`,
+          reason: `${reasonPrefix}-arbiter-${args.reason}`,
         },
-        logMessage:
-          'Claude arbiter unavailable, handed off arbiter turn to codex',
+        targetLevel: targetLevel,
+        logMessage: `Claude arbiter unavailable, handed off arbiter turn to ${targetAgentType}`,
       },
     };
   }
@@ -91,10 +119,10 @@ export function resolveCodexFallbackHandoff(args: {
           ...baseHandoff,
           target_role: 'reviewer',
           intended_role: 'reviewer',
-          reason: `reviewer-claude-${args.reason}`,
+          reason: `${reasonPrefix}-reviewer-${args.reason}`,
         },
-        logMessage:
-          'Claude reviewer unavailable, handed off review turn to codex-review',
+        targetLevel: targetLevel,
+        logMessage: `Claude reviewer unavailable, handed off review turn to ${targetAgentType}-review`,
       },
     };
   }
@@ -106,11 +134,11 @@ export function resolveCodexFallbackHandoff(args: {
         ...baseHandoff,
         target_role: args.activeRole,
         intended_role: args.activeRole,
-        reason: `claude-${args.reason}`,
+        reason: `${reasonPrefix}-${args.reason}`,
       },
-      activateOwnerFailoverReason: `claude-${args.reason}`,
-      logMessage:
-        'Claude unavailable, handed off current owner turn to codex fallback',
+      activateOwnerFailoverReason: `${reasonPrefix}-${args.reason}`,
+      targetLevel: targetLevel,
+      logMessage: `Claude unavailable, handed off current owner turn to ${targetAgentType} fallback`,
     },
   };
 }

@@ -110,7 +110,13 @@ async function queryModel(
     });
 
     if (!response.ok) {
-      const respBody = await response.text().catch(() => '');
+      const respBody = await response.text().catch((bodyErr) => {
+        logger.debug(
+          { err: normalizeError(bodyErr), model: model.name },
+          'Failed to read error response body from MoA model',
+        );
+        return '';
+      });
       throw new Error(
         `${response.status} ${response.statusText}: ${respBody.slice(0, 200)}`,
       );

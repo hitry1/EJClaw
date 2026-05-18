@@ -39,6 +39,22 @@ const DISCORD_OWNER_TOKEN_KEY = 'DISCORD_OWNER_BOT_TOKEN';
 const DISCORD_REVIEWER_TOKEN_KEY = 'DISCORD_REVIEWER_BOT_TOKEN';
 const DISCORD_ARBITER_TOKEN_KEY = 'DISCORD_ARBITER_BOT_TOKEN';
 
+/** Maximum attachment download size (25 MB — Discord's own file limit). */
+const MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024;
+
+/** Allowed attachment extension pattern (reject executables/scripts). */
+const BLOCKED_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',
+  '.sh', '.bash', '.ps1', '.vbs', '.js', '.wsh', '.wsf',
+]);
+
+/**
+ * Sanitise an attachment filename: strip control chars and path separators.
+ */
+function sanitizeAttachmentName(raw: string): string {
+  return raw.replace(/[\x00-\x1f]/g, '').replace(/[/\\]/g, '_');
+}
+
 /**
  * Download a Discord attachment to local disk.
  * Returns the absolute path to the saved file.
@@ -47,15 +63,51 @@ async function downloadAttachment(
   att: Attachment,
   defaultExt = '.bin',
 ): Promise<string> {
+  // Pre-check size from Discord metadata when available
+  if (att.size && att.size > MAX_DOWNLOAD_BYTES) {
+    throw new Error(
+      `Attachment too large: ${att.size} bytes (max ${MAX_DOWNLOAD_BYTES})`,
+    );
+  }
+
   const res = await fetch(att.url);
   if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+
+  // Verify Content-Length before buffering
+  const contentLength = Number(res.headers.get('content-length') || '0');
+  if (contentLength > MAX_DOWNLOAD_BYTES) {
+    throw new Error(
+      `Attachment Content-Length too large: ${contentLength} bytes (max ${MAX_DOWNLOAD_BYTES})`,
+    );
+  }
+
   const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length > MAX_DOWNLOAD_BYTES) {
+    throw new Error(
+      `Attachment body too large: ${buffer.length} bytes (max ${MAX_DOWNLOAD_BYTES})`,
+    );
+  }
 
   fs.mkdirSync(ATTACHMENTS_DIR, { recursive: true });
-  const ext = path.extname(att.name || `file${defaultExt}`) || defaultExt;
+  const safeName = sanitizeAttachmentName(att.name || `file${defaultExt}`);
+  const ext = path.extname(safeName) || defaultExt;
+
+  // Block executable/script extensions
+  if (BLOCKED_EXTENSIONS.has(ext.toLowerCase())) {
+    throw new Error(`Attachment extension not allowed: ${ext}`);
+  }
+
+  // Use controlled filename: timestamp + Discord ID + extension
   const filename = `${Date.now()}-${att.id}${ext}`;
   const filePath = path.join(ATTACHMENTS_DIR, filename);
-  fs.writeFileSync(filePath, buffer);
+
+  // Verify the resolved path stays within ATTACHMENTS_DIR
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith(path.resolve(ATTACHMENTS_DIR) + path.sep)) {
+    throw new Error('Attachment path traversal detected');
+  }
+
+  await fs.promises.writeFile(filePath, buffer);
   logger.info({ file: filename, size: buffer.length }, 'Attachment downloaded');
   return filePath;
 }
