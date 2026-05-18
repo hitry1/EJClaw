@@ -291,24 +291,60 @@ let globalFailoverLevel = FailoverLevel.NONE;
 let globalFailoverReason: string | null = null;
 let globalFailoverActivatedAt: string | null = null;
 
+export type FailoverNotifier = (event: {
+  chatJid: string;
+  fromLevel: FailoverLevel;
+  toLevel: FailoverLevel;
+  reason: string;
+  targetName: string;
+}) => void;
+
+let failoverNotifier: FailoverNotifier | null = null;
+
+export function setFailoverNotifier(notifier: FailoverNotifier | null): void {
+  failoverNotifier = notifier;
+}
+
+function describeFailoverTarget(level: FailoverLevel): string {
+  switch (level) {
+    case FailoverLevel.GEMMA:
+      return 'Gemma';
+    case FailoverLevel.CODEX:
+      return 'Codex';
+    case FailoverLevel.OLLAMA:
+      return 'Ollama (qwen2.5-coder:7b)';
+    default:
+      return 'Claude';
+  }
+}
+
 export function activateFailover(
-  _chatJid: string,
+  chatJid: string,
   level: FailoverLevel,
   reason: string,
 ): void {
+  const fromLevel = globalFailoverLevel;
   globalFailoverLevel = level;
   globalFailoverReason = reason;
   globalFailoverActivatedAt = new Date().toISOString();
-  const targetName =
-    level === FailoverLevel.GEMMA
-      ? 'Gemma'
-      : level === FailoverLevel.OLLAMA
-        ? 'Ollama (qwen2.5-coder:7b)'
-        : 'Codex';
+  const targetName = describeFailoverTarget(level);
   logger.warn(
     { reason, activatedAt: globalFailoverActivatedAt, level },
     `Global failover activated (Level: ${FailoverLevel[level]}) — owner execution switching to ${targetName} across all channels`,
   );
+  if (failoverNotifier) {
+    try {
+      failoverNotifier({
+        chatJid,
+        fromLevel,
+        toLevel: level,
+        reason,
+        targetName,
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failover notifier threw; ignoring');
+    }
+  }
 }
 
 export function isGlobalFailoverActive(): boolean {

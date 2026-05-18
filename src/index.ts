@@ -75,10 +75,11 @@ import {
 import {
   clearGlobalFailover,
   getGlobalFailoverInfo,
+  setFailoverNotifier,
 } from './service-routing.js';
 import { resolveStartupFailureExitCode } from './startup-preconditions.js';
 import { createRuntimeState } from './runtime-state.js';
-import { FAILOVER_MIN_DURATION_MS } from './config.js';
+import { FAILOVER_MIN_DURATION_MS, FailoverLevel } from './config.js';
 
 // Token rotation is initialized lazily on first use or at startup below
 
@@ -350,6 +351,18 @@ async function main(): Promise<void> {
     logger.fatal('No channels connected');
     process.exit(1);
   }
+
+  setFailoverNotifier(({ chatJid, fromLevel, toLevel, reason, targetName }) => {
+    const fromName = FailoverLevel[fromLevel];
+    const toName = FailoverLevel[toLevel];
+    const text = `[Failover] 토큰 소진/오류로 owner 모델이 ${targetName}(으)로 전환됨 · ${fromName} → ${toName} · 사유: ${reason}`;
+    void deliverFormattedCanonicalMessage(chatJid, text).catch((err) => {
+      logger.warn(
+        { err, chatJid, reason },
+        'Failed to deliver failover notification to chat',
+      );
+    });
+  });
 
   // Start subsystems (independently of connection handler)
   startSchedulerLoop({
